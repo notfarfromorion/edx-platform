@@ -1129,3 +1129,7 @@ derive_settings(__name__)
 ######################### Overriding custom enrollment roles ###############
 
 MANUAL_ENROLLMENT_ROLE_CHOICES = ENV_TOKENS.get('MANUAL_ENROLLMENT_ROLE_CHOICES', MANUAL_ENROLLMENT_ROLE_CHOICES)
+
+########################## limiting dashboard courses ######################
+
+DASHBOARD_COURSE_LIMIT = ENV_TOKENS.get('DASHBOARD_COURSE_LIMIT', 250)

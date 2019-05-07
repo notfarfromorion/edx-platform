@@ -616,3 +616,8 @@ derive_settings(__name__)
 
 ############### Settings for edx-rbac  ###############
 SYSTEM_WIDE_ROLE_CLASSES = os.environ.get("SYSTEM_WIDE_ROLE_CLASSES", [])
+
+
+########################## limiting dashboard courses ######################
+
+DASHBOARD_COURSE_LIMIT = 250
