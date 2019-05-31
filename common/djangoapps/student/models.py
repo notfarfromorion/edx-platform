@@ -61,6 +61,7 @@ from courseware.models import (
     OrgDynamicUpgradeDeadlineConfiguration
 )
 from lms.djangoapps.certificates.models import GeneratedCertificate
+from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 import openedx.core.djangoapps.django_comment_common.comment_client as cc
 from openedx.core.djangoapps.enrollments.api import _default_course_mode
@@ -2051,6 +2052,31 @@ def invalidate_enrollment_mode_cache(sender, instance, **kwargs):  # pylint: dis
         text_type(instance.course_id)
     )
     cache.delete(cache_key)
+
+
+@receiver(models.signals.post_save, sender=CourseEnrollment)
+def update_expiry_email_date(sender, instance, **kwargs):  # pylint: disable=unused-argument
+    """
+    If the user has enrolled in verified track of a course and has expired ID
+    verification then send email to get the ID verified by setting the
+    expiry_email_date field.
+    """
+    email_attr = getattr(settings, 'VERIFICATION_EXPIRY_EMAIL', {'DAYS_RANGE': 1, 'RESEND_DAYS': 15})
+
+    if instance.mode == 'verified':
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        recently_expired_date = today - timedelta(days=email_attr['DAYS_RANGE'])
+
+        try:
+            verification = SoftwareSecurePhotoVerification.objects.filter(
+                status='approved', user_id=instance.user_id).latest('updated_at')
+
+            if verification.expiry_date < recently_expired_date and not verification.expiry_email_date:
+                expiry_email_date = today - timedelta(days=email_attr['RESEND_DAYS'])
+                SoftwareSecurePhotoVerification.objects.filter(pk=verification.pk).update(
+                    expiry_email_date=expiry_email_date)
+        except SoftwareSecurePhotoVerification.DoesNotExist:
+            return
 
 
 class ManualEnrollmentAudit(models.Model):
