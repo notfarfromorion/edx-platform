@@ -144,6 +144,14 @@ class ProgramEnrollmentPagination(CursorPagination):
         return self.page_size
 
 
+class InvalidRequestException(Exception):
+    pass
+
+
+class PayloadTooLargeException(Exception):
+    pass
+
+
 class ProgramEnrollmentsView(DeveloperErrorViewMixin, PaginatedAPIView):
     """
     A view for Create/Read/Update methods on Program Enrollment data.
@@ -345,23 +353,59 @@ class ProgramEnrollmentsView(DeveloperErrorViewMixin, PaginatedAPIView):
         """
         Create program enrollments for a list of learners
         """
-        if len(request.data) > MAX_ENROLLMENT_RECORDS:
+        try:
+            response_data = self.create_program_enrollments(request.data, kwargs['program_uuid'])
+        except PayloadTooLargeException:
             return Response(
                 status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 content_type='application/json',
             )
+        except InvalidRequestException:
+            return Response(
+                'invalid enrollment record',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        return self._get_created_or_updated_response(response_data)
 
-        program_uuid = kwargs['program_uuid']
-        student_data = self._request_data_by_student_key(request, program_uuid)
-        if None in student_data:
+    @verify_program_exists
+    def patch(self, request, **kwargs):
+        """
+        Modify program enrollments for a list of learners
+        """
+        try:
+            response_data = self.modify_program_enrollments(request.data, kwargs['program_uuid'])
+        except PayloadTooLargeException:
+            return Response(
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                content_type='application/json',
+            )
+        except InvalidRequestException:
             return Response(
                 'invalid enrollment record',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
+        return self._get_created_or_updated_response(response_data, status.HTTP_200_OK)
+
+    def create_program_enrollments(self, request_data, program_uuid):
+        """
+        Given a list of program enrollment records, attempts to create matching enrollments
+        in the given program
+
+        Returns:
+            dict mapping student keys to an error status or their newly created status
+        """
+        if len(request_data) > MAX_ENROLLMENT_RECORDS:
+            raise PayloadTooLargeException()
+
+        student_data = self._request_data_by_student_key(request_data, program_uuid)
+        if None in student_data:
+            raise InvalidRequestException()
+
         response_data = {}
-        response_data.update(self._remove_duplicate_entries(request, student_data))
-        response_data.update(self._remove_existing_entries(program_uuid, student_data))
+        response_data.update(self._remove_duplicate_entries(request_data, student_data))
+        existing_enrollments = self.get_existing_program_enrollments(program_uuid, student_data)
+        response_data.update(self._remove_existing_entries(student_data, existing_enrollments))
 
         enrollments_to_create = {}
 
@@ -383,79 +427,68 @@ class ProgramEnrollmentsView(DeveloperErrorViewMixin, PaginatedAPIView):
                 if 'status' in serializer.errors and serializer.errors['status'][0].code == 'invalid_choice':
                     response_data[student_key] = CourseEnrollmentResponseStatuses.INVALID_STATUS
                 else:
-                    return Response(
-                        'invalid enrollment record',
-                        status.HTTP_422_UNPROCESSABLE_ENTITY
-                    )
+                    raise InvalidRequestException()
 
         # TODO: make this a bulk save - https://openedx.atlassian.net/browse/EDUCATOR-4305
         for (student_key, _), enrollment_serializer in enrollments_to_create.items():
             enrollment_serializer.save()
+        return response_data
 
-        return self._get_created_or_updated_response(request, enrollments_to_create, response_data)
-
-    @verify_program_exists
-    def patch(self, request, **kwargs):
+    def modify_program_enrollments(self, data, program_uuid):
         """
         Modify the program enrollments for a list of learners
-        """
-        if len(request.data) > MAX_ENROLLMENT_RECORDS:
-            return Response(
-                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                content_type='application/json',
-            )
 
-        program_uuid = kwargs['program_uuid']
-        student_data = self._request_data_by_student_key(request, program_uuid)
+        Returns:
+            dict mapping student keys to an error status or their newly modified status
+        """
+        if len(data) > MAX_ENROLLMENT_RECORDS:
+            raise PayloadTooLargeException()
+
+        student_data = self._request_data_by_student_key(data, program_uuid)
         if None in student_data:
-            return Response(
-                'invalid enrollment record',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
+            raise InvalidRequestException()
 
         response_data = {}
-        response_data.update(self._remove_duplicate_entries(request, student_data))
+        response_data.update(self._remove_duplicate_entries(data, student_data))
+        existing_enrollments = self.get_existing_program_enrollments(program_uuid, student_data)
+        response_data.update(self._remove_unenrolled_entries(student_data, existing_enrollments))
 
-        existing_enrollments = {
-            enrollment.external_user_key: enrollment
-            for enrollment in
-            ProgramEnrollment.bulk_read_by_student_key(program_uuid, student_data)
-        }
-
-        enrollments_to_create = {}
-
-        for external_user_key in student_data.keys():
-            if external_user_key not in existing_enrollments:
-                student_data.pop(external_user_key)
-                response_data[external_user_key] = CourseEnrollmentResponseStatuses.NOT_IN_PROGRAM
-
+        enrollments_to_modify = {}
         for external_user_key, enrollment in existing_enrollments.items():
             student = {key: value for key, value in student_data[external_user_key].items() if key == 'status'}
             enrollment_serializer = ProgramEnrollmentSerializer(enrollment, data=student, partial=True)
             if enrollment_serializer.is_valid():
-                enrollments_to_create[(external_user_key, enrollment.curriculum_uuid)] = enrollment_serializer
+                enrollments_to_modify[(external_user_key, enrollment.curriculum_uuid)] = enrollment_serializer
                 enrollment_serializer.save()
                 response_data[external_user_key] = student['status']
             else:
                 serializer_is_invalid = enrollment_serializer.errors['status'][0].code == 'invalid_choice'
                 if 'status' in enrollment_serializer.errors and serializer_is_invalid:
                     response_data[external_user_key] = CourseEnrollmentResponseStatuses.INVALID_STATUS
+                else:
+                    raise InvalidRequestException()
+        return response_data
 
-        return self._get_created_or_updated_response(request, enrollments_to_create, response_data, status.HTTP_200_OK)
+    def get_existing_program_enrollments(self, program_uuid, student_data):
+        """ Returns the existing program enrollments for the given students and program """
+        return {
+            e.external_user_key: e
+            for e in ProgramEnrollment.bulk_read_by_student_key(program_uuid, student_data)
+        }
 
-    def _remove_duplicate_entries(self, request, student_data):
+    def _remove_duplicate_entries(self, data, student_data):
         """ Helper method to remove duplicate entries (based on student key) from request data. """
         result = {}
-        key_counter = Counter([enrollment.get(REQUEST_STUDENT_KEY) for enrollment in request.data])
+        key_counter = Counter([enrollment.get(REQUEST_STUDENT_KEY) for enrollment in data])
         for student_key, count in key_counter.items():
             if count > 1:
                 result[student_key] = CourseEnrollmentResponseStatuses.DUPLICATED
                 student_data.pop(student_key)
         return result
 
-    def _request_data_by_student_key(self, request, program_uuid):
+    def _request_data_by_student_key(self, data, program_uuid):
         """
-        Helper method that returns an OrderedDict of rows from request.data,
+        Helper method that returns an OrderedDict of rows from request data,
         keyed by the `external_user_key`.
         """
         return OrderedDict((
@@ -466,29 +499,49 @@ class ProgramEnrollmentsView(DeveloperErrorViewMixin, PaginatedAPIView):
                 'status': row.get('status'),
                 'external_user_key': row.get(REQUEST_STUDENT_KEY),
             })
-            for row in request.data
+            for row in data
         )
 
-    def _remove_existing_entries(self, program_uuid, student_data):
+    def _remove_existing_entries(self, student_data, existing_enrollments):
         """ Helper method to remove entries that have existing ProgramEnrollment records. """
+        return self._remove_by_enrollment(
+            student_data,
+            existing_enrollments,
+            True,
+            CourseEnrollmentResponseStatuses.CONFLICT
+        )
+
+    def _remove_unenrolled_entries(self, student_data, existing_enrollments):
+        """ Helper method to remove entries that don't have existing ProgramEnrollment records. """
+        return self._remove_by_enrollment(
+            student_data,
+            existing_enrollments,
+            False,
+            CourseEnrollmentResponseStatuses.NOT_IN_PROGRAM
+        )
+
+    def _remove_by_enrollment(self, student_data, existing_enrollments, in_program_condition, result_status):
+        """ Helper method for removing entries conditionally by enrollment """
         result = {}
-        existing_enrollments = ProgramEnrollment.bulk_read_by_student_key(program_uuid, student_data)
-        for enrollment in existing_enrollments:
-            result[enrollment.external_user_key] = CourseEnrollmentResponseStatuses.CONFLICT
-            student_data.pop(enrollment.external_user_key)
+        for student_key in student_data:
+            if (student_key in existing_enrollments) == in_program_condition:
+                result[student_key] = result_status
+                student_data.pop(student_key)
+
         return result
 
-    def _get_created_or_updated_response(
-            self, request, created_or_updated_data, response_data, default_status=status.HTTP_201_CREATED
-    ):
+    def _get_created_or_updated_response(self, response_data, default_status=status.HTTP_201_CREATED):
         """
         Helper method to determine an appropirate HTTP response status code.
         """
         response_status = default_status
-
-        if not created_or_updated_data:
+        good_count = len([
+            v for _, v in response_data.items()
+            if v not in CourseEnrollmentResponseStatuses.ERROR_STATUSES
+        ])
+        if not good_count:
             response_status = status.HTTP_422_UNPROCESSABLE_ENTITY
-        elif len(request.data) != len(created_or_updated_data):
+        elif good_count != len(response_data):
             response_status = status.HTTP_207_MULTI_STATUS
 
         return Response(
