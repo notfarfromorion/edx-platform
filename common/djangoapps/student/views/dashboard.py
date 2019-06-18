@@ -203,7 +203,7 @@ def _create_recent_enrollment_message(course_enrollments, course_modes):  # pyli
         )
 
 
-def get_course_enrollments(user, org_whitelist, org_blacklist, load_all_courses=False):
+def get_course_enrollments(user, org_whitelist, org_blacklist, load_all_courses=True):
     """
     Given a user, return a filtered set of his or her course enrollments.
 
@@ -211,6 +211,8 @@ def get_course_enrollments(user, org_whitelist, org_blacklist, load_all_courses=
         user (User): the user in question.
         org_whitelist (list[str]): If not None, ONLY courses of these orgs will be returned.
         org_blacklist (list[str]): Courses of these orgs will be excluded.
+        load_all_courses: If True then all the courses would be returned otherwise limited courses would
+        be returned based on the settings in the config
 
     Returns:
         generator[CourseEnrollment]: a sequence of enrollments to be displayed
@@ -531,6 +533,21 @@ def _credit_statuses(user, course_enrollments):
     return statuses
 
 
+def show_load_all_courses_link(load_all_courses, user, courses_count):
+    """
+    By default dashboard will show limited courses based on the course limit
+    set in configuration.
+
+    A link is provided at the bottom to load all the courses if there are any courses.
+    """
+
+    total_enrollments = CourseEnrollment.enrollments_for_user(user).count()
+    if not load_all_courses and courses_count < total_enrollments:
+        return True
+
+    return False
+
+
 @login_required
 @ensure_csrf_cookie
 @add_maintenance_banner
@@ -541,7 +558,7 @@ def student_dashboard(request):
     TODO: This is lms specific and does not belong in common code.
     Note:
         load_all_courses parameter in GET would bypass the default course limit that is
-        set in in configuration.
+        set in configuration.
     Arguments:
         request: The request object.
 
@@ -813,6 +830,8 @@ def student_dashboard(request):
             enr for enr in course_enrollments if entitlement.enrollment_course_run.course_id != enr.course_id
         ]
 
+    courses_count = CourseEnrollment.get_dashboard_course_limit()
+
     context = {
         'urls': urls,
         'programs_data': programs_data,
@@ -863,9 +882,8 @@ def student_dashboard(request):
         'empty_dashboard_message': empty_dashboard_message,
         'recovery_email_message': recovery_email_message,
         'recovery_email_activation_message': recovery_email_activation_message,
-        'courses_count': CourseEnrollment.get_dashboard_course_limit(),
-        'load_all_courses': load_all_courses,
-        'total_enrollments': CourseEnrollment.enrollments_for_user(user).count(),
+        'show_load_all_courses_link': show_load_all_courses_link(load_all_courses, user, courses_count),
+        'courses_count': courses_count,
         # TODO START: Clean up REVEM-205 & REVEM-204.
         # The below context is for experiments in dashboard_metadata
         'course_prices': get_experiment_dashboard_metadata_context(course_enrollments) if DASHBOARD_METADATA_FLAG.is_enabled() else None,

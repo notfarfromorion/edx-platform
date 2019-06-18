@@ -1147,8 +1147,8 @@ class CourseEnrollment(models.Model):
     MODE_CACHE_NAMESPACE = u'CourseEnrollment.mode_and_active'
 
     class Meta(object):
-        unique_together = (('user', 'course'),
-                           ('user', 'created'))
+        unique_together = (('user', 'course'), )
+        index_together = (('user', 'created'),)
         ordering = ('user', 'course')
 
     def __init__(self, *args, **kwargs):
