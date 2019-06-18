@@ -36,7 +36,7 @@ if [[ -n "$TOXENV" ]]; then
     export NO_PREREQ_INSTALL="True"
 fi
 
-if [[ -n "$XDIST_NUM_TASKS" ]]; then
+if [[ -n "$XDIST_NUM_WORKERS" ]]; then
     bash scripts/xdist/prepare_xdist_nodes.sh
     PAVER_ARGS="-v --xdist_ip_addresses="$(<pytest_task_ips.txt)""
     export SHARD="all"
