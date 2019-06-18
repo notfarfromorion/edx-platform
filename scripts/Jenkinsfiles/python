@@ -39,10 +39,13 @@ pipeline {
         timeout(60)
     }
     environment {
-        XDIST_CONTAINER_SUBNET = credentials('XDIST_CONTAINER_SUBNET')
-        XDIST_CONTAINER_SECURITY_GROUP = credentials('XDIST_CONTAINER_SECURITY_GROUP')
-        XDIST_CONTAINER_TASK_NAME = "jenkins-worker-task"
         XDIST_GIT_BRANCH = xdist_git_branch()
+        XDIST_INSTANCE_TYPE = "c5d.large"
+        XDIST_WORKER_AMI = credentials('XDIST_WORKER_AMI')
+        XDIST_WORKER_IAM_PROFILE_ARN = credentials('XDIST_WORKER_IAM_PROFILE_ARN')
+        XDIST_WORKER_KEY_NAME = credentials('XDIST_WORKER_KEY_NAME')
+        XDIST_WORKER_SUBNET = credentials('XDIST_WORKER_SUBNET')
+        XDIST_WORKER_SECURITY_GROUP = credentials('XDIST_WORKER_SECURITY_GROUP')
     }
     stages {
         stage('Mark build as pending on Github') {
@@ -74,7 +77,7 @@ pipeline {
                     agent { label "jenkins-worker" }
                     environment {
                         TEST_SUITE = "lms-unit"
-                        XDIST_NUM_TASKS = 10
+                        XDIST_NUM_WORKERS = 10
                         XDIST_REMOTE_NUM_PROCESSES = 1
                     }
                     steps {
@@ -94,7 +97,7 @@ pipeline {
                     agent { label "jenkins-worker" }
                     environment {
                         TEST_SUITE = "cms-unit"
-                        XDIST_NUM_TASKS = 3
+                        XDIST_NUM_WORKERS = 3
                         XDIST_REMOTE_NUM_PROCESSES = 1
                     }
                     steps {
@@ -114,7 +117,7 @@ pipeline {
                     agent { label "jenkins-worker" }
                     environment {
                         TEST_SUITE = "commonlib-unit"
-                        XDIST_NUM_TASKS = 3
+                        XDIST_NUM_WORKERS = 3
                         XDIST_REMOTE_NUM_PROCESSES = 1
                     }
                     steps {
