@@ -5,8 +5,8 @@ echo "Spinning up xdist workers with pytest_worker_manager.py"
 python scripts/xdist/pytest_worker_manager.py -a up -n ${XDIST_NUM_WORKERS} \
 -ami ${XDIST_WORKER_AMI} \
 -type ${XDIST_INSTANCE_TYPE} \
--s ${XDIST_CONTAINER_SUBNET} \
--sg ${XDIST_CONTAINER_SECURITY_GROUP} \
+-s ${XDIST_WORKER_SUBNET} \
+-sg ${XDIST_WORKER_SECURITY_GROUP} \
 -key ${XDIST_WORKER_KEY_NAME} \
 -iam ${XDIST_WORKER_IAM_PROFILE_ARN}
 
