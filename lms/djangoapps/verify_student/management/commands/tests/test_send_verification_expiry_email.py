@@ -244,7 +244,7 @@ class TestSendVerificationExpiryEmail(MockS3Mixin, ModuleStoreTestCase):
         for i in range(1, self.default_no_of_emails + 2):
             if SoftwareSecurePhotoVerification.objects.get(pk=verification.id).expiry_email_date:
                 today = now().replace(hour=0, minute=0, second=0, microsecond=0)
-                verification.expiry_date = today - timedelta(days=self.resend_days + 1)
+                verification.expiry_date = today - timedelta(days=self.resend_days * i + 1)
                 verification.expiry_email_date = today - timedelta(days=self.resend_days)
                 verification.save()
                 call_command('send_verification_expiry_email')
