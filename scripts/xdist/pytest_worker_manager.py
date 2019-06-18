@@ -23,7 +23,7 @@ class PytestWorkerManager():
     def spin_up_workers(self, number_of_workers, ami, instance_type, subnet, security_group_ids, key_name, iam_instance_profile):
         """
         Spins up workers and generates two .txt files, containing the IP/ arns
-        of the new tasks.
+        of the new workers.
         """
         logging.info("Spinning up {} workers".format(number_of_workers))
 
@@ -55,7 +55,7 @@ class PytestWorkerManager():
                 # Handle AWS throttling with an exponential backoff
                 if retry == self.MAX_RUN_WORKER_RETRIES:
                     raise StandardError(
-                        "MAX_RUN_WORKER_RETRIES ({}) reached while spinning up tasks due to AWS throttling.".format(self.MAX_RUN_WORKER_RETRIES)
+                        "MAX_RUN_WORKER_RETRIES ({}) reached while spinning up workers due to AWS throttling.".format(self.MAX_RUN_WORKER_RETRIES)
                     )
                 logger.info("Hit error: {}. Retrying".format(err))
                 countdown = 2 ** retry
@@ -105,9 +105,9 @@ class PytestWorkerManager():
 
         worker_instance_id_list_string = ",".join(worker_instance_ids)
         logger.info("Worker Instance Id list: {}".format(worker_instance_id_list_string))
-        task_arn_file = open("pytest_worker_instance_ids.txt", "w")
-        task_arn_file.write(worker_instance_id_list_string)
-        task_arn_file.close()
+        worker_arn_file = open("pytest_worker_instance_ids.txt", "w")
+        worker_arn_file.write(worker_instance_id_list_string)
+        worker_arn_file.close()
 
     def terminate_workers(self, worker_instance_ids):
         """
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     parser.add_argument('--iam-arn', '-iam', default=None,
                         help="Iam Instance Profile ARN for the workers")
 
-    # Terminating tasks
+    # Terminating workers
     parser.add_argument('--instance-ids', '-ids', default=None,
                         help="Instance ids terminate")
 
@@ -172,7 +172,7 @@ if __name__ == "__main__":
             args.iam_arn
         )
     elif args.action == 'down':
-        containerManager.terminate_tasks(
+        containerManager.terminate_workers(
             args.instance_ids
         )
     else:
