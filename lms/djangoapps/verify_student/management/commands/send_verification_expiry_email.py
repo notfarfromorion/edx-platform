@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.urls import reverse
 from django.utils.timezone import now
@@ -81,11 +81,16 @@ class Command(BaseCommand):
         It creates batches of expired Software Secure Photo Verification and sends it to send_verification_expiry_email
         that used edx_ace to send email to these learners
         """
+        default_emails = settings.VERIFICATION_EXPIRY_EMAIL['DEFAULT_EMAILS']
         resend_days = settings.VERIFICATION_EXPIRY_EMAIL['RESEND_DAYS']
         days = settings.VERIFICATION_EXPIRY_EMAIL['DAYS_RANGE']
         batch_size = options['batch_size']
         sleep_time = options['sleep_time']
         dry_run = options['dry_run']
+
+        if default_emails <= 0:
+            raise CommandError(u'DEFAULT_EMAILS must be a positive integer. If you do not wish to send emails '
+                               u'use --dry-run flag instead.')
 
         end_date = now().replace(hour=0, minute=0, second=0, microsecond=0)
         # If email was sent and user did not re-verify then this date will be used as the criteria for resending email
@@ -115,7 +120,7 @@ class Command(BaseCommand):
         email_config = {
             'resend_days': resend_days,
             'dry_run': dry_run,
-            'default_emails': settings.VERIFICATION_EXPIRY_EMAIL['DEFAULT_EMAILS']
+            'default_emails': default_emails
         }
 
         for verification in sspv:
@@ -131,13 +136,17 @@ class Command(BaseCommand):
         if batch_verifications:
             self.send_verification_expiry_email(batch_verifications, email_config)
 
-    def send_verification_expiry_email(self, batch_verifications, config):
+    def send_verification_expiry_email(self, batch_verifications, email_config):
         """
         Sends verification expiry email to the learners in the batch using edx_ace
         If the email is successfully sent change the expiry_email_date to reflect when the
         email was sent
+
+        :param batch_verifications: verification objects for which email will be sent
+        :param email_config: Contains configuration like dry-run flag value, which determines whether actual email will
+                             be sent or not
         """
-        if config['dry_run']:
+        if email_config['dry_run']:
             logger.info(
                 u"This was a dry run, no email was sent. For the actual run email would have been sent "
                 u"to {} learner(s)".format(len(batch_verifications))
@@ -166,17 +175,20 @@ class Command(BaseCommand):
                     }
                 )
                 ace.send(msg)
-                self._set_email_expiry_date(verification, user, config)
+                self._set_email_expiry_date(verification, user, email_config)
 
-    def _set_email_expiry_date(self, verification, user, config):
+    def _set_email_expiry_date(self, verification, user, email_config):
         """
         If already DEFAULT Number of emails are sent, then verify that user is enrolled in at least
         one verified course run for which the course has not ended else stop sending emails
 
         Setting email_expiry_date to None will prevent from sending any emails in future to the learner
+
+        :param user: User for which course enrollments will be fetched
+        :param email_config: Contains configurations like resend_days and default_emails value
         """
         send_expiry_email_again = True
-        email_duration = config['resend_days'] * (config['default_emails'] - 1)
+        email_duration = email_config['resend_days'] * (email_config['default_emails'] - 1)
         days_since_expiry = (now() - verification.expiry_date).days
 
         if days_since_expiry >= email_duration:
@@ -186,9 +198,8 @@ class Command(BaseCommand):
             for enrollment in enrollments:
                 if 'verified' == enrollment.mode and not enrollment.course.has_ended():
                     send_expiry_email_again = True
+                    break
 
         verification_qs = SoftwareSecurePhotoVerification.objects.filter(pk=verification.pk)
-        if send_expiry_email_again:
-            verification_qs.update(expiry_email_date=now().replace(hour=0, minute=0, second=0, microsecond=0))
-        else:
-            verification_qs.update(expiry_email_date=None)
+        email_date = now().replace(hour=0, minute=0, second=0, microsecond=0) if send_expiry_email_again else None
+        verification_qs.update(expiry_email_date=email_date)
