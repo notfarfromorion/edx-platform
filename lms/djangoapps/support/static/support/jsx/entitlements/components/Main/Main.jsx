@@ -1,10 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { connect } from 'react-redux';
 
 import { Button, StatusAlert } from '@edx/paragon';
-import SearchContainer from '../Search/SearchContainer.jsx';
-import EntitlementSupportTableContainer from '../Table/EntitlementSupportTableContainer.jsx';
-import EntitlementFormContainer from '../EntitlementForm/container.jsx';
+import SearchContainer from '../Search/SearchContainer';
+import EntitlementSupportTableContainer from '../Table/EntitlementSupportTableContainer';
+import EntitlementFormContainer from '../EntitlementForm/container';
 
 const Main = props => (
   <div className="entitlement-support-wrapper">
@@ -21,28 +22,53 @@ const Main = props => (
       isFormOpen={props.isFormOpen}
       ecommerceUrl={props.ecommerceUrl}
       openCreationForm={props.openCreationForm}
+      entitlements={props.entitlements}
     />
   </div>
 );
 
-const MainContent = (props) => {
-  if (props.isFormOpen) {
-    return <EntitlementFormContainer />;
+class MainContent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      searchSubmitted: false,
+    };
+
+    this.handleSearchSubmit = this.handleSearchSubmit.bind(this);
   }
-  return (
-    <div>
-      <div className="actions">
-        <SearchContainer />
-        <Button
-          className={['btn', 'btn-primary']}
-          label="Create New Entitlement"
-          onClick={props.openCreationForm}
-        />
+
+  handleSearchSubmit(searchSubmitted) {
+    this.setState({ searchSubmitted });
+  }
+
+  render() {
+    if (this.props.isFormOpen) {
+      return <EntitlementFormContainer />;
+    }
+
+    return (
+      <div>
+        <div className="actions">
+          <SearchContainer handleSearchSubmit={this.handleSearchSubmit} />
+          <Button
+            className={['btn', 'btn-primary']}
+            label="Create New Entitlement"
+            onClick={this.props.openCreationForm}
+          />
+        </div>
+        {
+          this.props.entitlements.length > 0 ?
+            <EntitlementSupportTableContainer ecommerceUrl={this.props.ecommerceUrl} /> :
+              this.state.searchSubmitted ? <div>No Result Found</div> : null
+        }
       </div>
-      <EntitlementSupportTableContainer ecommerceUrl={props.ecommerceUrl} />
-    </div>
-  );
-};
+    );
+  }
+}
+
+const mapStateToProps = state => ({
+  entitlements: state.entitlements,
+});
 
 Main.propTypes = {
   errorMessage: PropTypes.string.isRequired,
@@ -50,12 +76,14 @@ Main.propTypes = {
   openCreationForm: PropTypes.func.isRequired,
   ecommerceUrl: PropTypes.string.isRequired,
   isFormOpen: PropTypes.bool.isRequired,
+  entitlements: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
 MainContent.propTypes = {
   openCreationForm: PropTypes.func.isRequired,
   ecommerceUrl: PropTypes.string.isRequired,
   isFormOpen: PropTypes.bool.isRequired,
+  entitlements: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
-export default Main;
+export default connect(mapStateToProps, null)(Main);

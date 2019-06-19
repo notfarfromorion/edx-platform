@@ -1,5 +1,5 @@
 import React from 'react';
-import { InputText } from '@edx/paragon';
+import { Button, InputText } from '@edx/paragon';
 import PropTypes from 'prop-types';
 
 
@@ -15,6 +15,7 @@ class Search extends React.Component {
   handleSubmit(event) {
     event.preventDefault();
     // updating state will cause react to re-render dom, the default refresh is unneeded
+    this.props.handleSearchSubmit(true);
     this.props.fetchEntitlements(this.state.username);
   }
 
@@ -24,16 +25,18 @@ class Search extends React.Component {
 
   render() {
     return (
-      <form onSubmit={this.handleSubmit} className="col-md-3 search-form">
+      <form onSubmit={this.handleSubmit} className="col-md-3 search-form form-inline">
         <InputText
           name="username"
-          label="Search by Username"
           value={this.state.username}
           onChange={this.handleUsernameChange}
+          placeholder="Search by Username"
+          inline
         />
-        <input
+        <Button
+          className={['btn', 'btn-primary', 'ml-2']}
+          label="Search"
           type="submit"
-          hidden
         />
       </form>
     );
@@ -42,6 +45,7 @@ class Search extends React.Component {
 
 Search.propTypes = {
   fetchEntitlements: PropTypes.func.isRequired,
+  handleSearchSubmit: PropTypes.func.isRequired,
 };
 
 export default Search;
