@@ -91,10 +91,11 @@ class TestCreateApiAccessRequest(TestCase):
         self.assertEqual(request.reason, 'whatever')
         self.assertEqual(request.website, 'test-site.edx.horse')
 
-    def test_default_site(self):
+    def test_default_values(self):
         call_command(self.command, self.user.username)
         request = ApiAccessRequest.objects.get(user=self.user)
         self.assertEqual(request.site, Site.objects.get_current())
+        self.assertEqual(request.status, ApiAccessRequest.APPROVED)
 
     def test_site(self):
         site = Site.objects.create(domain='www.mysite.com', name='testmysite')
