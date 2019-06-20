@@ -37,9 +37,9 @@ class PytestWorkerManager():
                     InstanceType=instance_type,
                     SubnetId=subnet,
                     SecurityGroupIds=security_group_ids,
-                    IamInstanceProfile={
-                        "Arn": iam_instance_profile
-                    },
+                    # IamInstanceProfile={
+                    #     "Arn": iam_instance_profile
+                    # },
                     KeyName=key_name,
                     TagSpecifications=[
                         {
