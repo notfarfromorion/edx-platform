@@ -38,7 +38,7 @@ fi
 
 if [[ -n "$XDIST_NUM_WORKERS" ]]; then
     bash scripts/xdist/prepare_xdist_nodes.sh
-    PAVER_ARGS="-v --xdist_ip_addresses="$(<pytest_task_ips.txt)""
+    PAVER_ARGS="-v --xdist_ip_addresses="$(<pytest_worker_ips.txt)""
     export SHARD="all"
     if [[ -n "$XDIST_REMOTE_NUM_PROCESSES" ]]; then
         PARALLEL="--processes=$XDIST_REMOTE_NUM_PROCESSES"
