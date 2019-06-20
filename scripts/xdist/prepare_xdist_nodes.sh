@@ -29,7 +29,7 @@ for ip in $(echo $ip_list | sed "s/,/ /g")
 do
     worker_reqs_cmd="ssh -o StrictHostKeyChecking=no jenkins@$ip
     'git clone --branch master --depth 1 -q https://github.com/edx/edx-platform.git; cd edx-platform;
-    git fetch -q origin ${XDIST_GIT_FETCH_STRING}; git checkout -q ${XDIST_GIT_BRANCH};
+    git fetch -fq origin ${XDIST_GIT_FETCH_STRING}; git checkout -q ${XDIST_GIT_BRANCH};
     source ../edxapp-env/bin/activate;
     pip install -q ${DJANGO_REQUIREMENT} -r requirements/edx/testing.txt; mkdir reports' & "
 
