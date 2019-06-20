@@ -1,10 +1,12 @@
 from mock import patch
 
 import ddt
+from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
+import unittest
 
 from openedx.core.djangoapps.api_admin.management.commands import create_api_access_request
 from openedx.core.djangoapps.api_admin.models import (
@@ -14,6 +16,7 @@ from openedx.core.djangoapps.api_admin.models import (
 from student.tests.factories import UserFactory
 
 
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Tests only valid in lms')
 @ddt.ddt
 class TestCreateApiAccessRequest(TestCase):
     """ Test create_api_access_request command """

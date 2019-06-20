@@ -107,7 +107,11 @@ class Command(BaseCommand):
                 site=site,
             )
         except Exception as e:
-            msg = u'Unable to create ApiAccessRequest for {}. Exception is {}.\n{}\n{}\n{}'.format(user.username, e, str(dir(e)), type(e).__name__, e.args)
+            msg = u'Unable to create ApiAccessRequest for {}. Exception is {}: {}'.format(
+                user.username,
+                type(e).__name__,
+                e
+            )
             raise CommandError(msg)
         logger.info(u'Created ApiAccessRequest for user {}'.format(user.username))
 
@@ -118,7 +122,7 @@ class Command(BaseCommand):
         try:
             _, created = ApiAccessConfig.objects.get_or_create(enabled=True)
         except Exception as e:
-            msg = u'Unable to create ApiAccessConfig. Exception is {}.\n{}\n{}\n{}'.format(e, str(dir(e)), type(e).__name__, e.args)
+            msg = u'Unable to create ApiAccessConfig. Exception is {}: {}'.format(type(e).__name__, e)
             raise CommandError(msg)
         if created:
             logger.info(u'Created ApiAccessConfig')
