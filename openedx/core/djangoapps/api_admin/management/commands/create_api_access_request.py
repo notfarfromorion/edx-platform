@@ -76,7 +76,8 @@ class Command(BaseCommand):
 
     def get_site(self, site_name):
         """
-        Given a site name, returns the site with that name. If site_name is None, we insted create a dummy site.
+        Given a site name, returns the site with that name. If site_name is None, we use
+        Site.objects.get_current() which returns the site specified in settings.SITE_ID.
         If a site name is supplied but there is no site found with that name, a CommandError is raised.
         """
         if site_name:
@@ -84,8 +85,8 @@ class Command(BaseCommand):
             if site:
                 return site
             raise CommandError(u'Site {} not found'.format(site_name))
-        dummy_site, _ = Site.objects.get_or_create(name=self.DUMMY_SITE_NAME, domain=self.DEFAULT_WEBSITE)
-        return dummy_site
+        else:
+            return Site.objects.get_current()
 
     def create_api_access_request(self, user, status, reason, website, site):
         """
