@@ -30,7 +30,7 @@ do
     worker_reqs_cmd="ssh -o StrictHostKeyChecking=no jenkins@$ip '
     git clone --branch master --depth 1 --no-tags -q https://github.com/edx/edx-platform.git; cd edx-platform;
     git fetch --depth=1 --no-tags -q origin ${XDIST_GIT_FETCH_STRING}; git checkout -q ${XDIST_GIT_BRANCH};
-    source /edx/app/edxapp/edxapp_env;
+    source edxapp_env/bin/activate;
     pip install -q ${DJANGO_REQUIREMENT} -r requirements/edx/testing.txt; mkdir reports' & "
 
     cmd=$cmd$worker_reqs_cmd
