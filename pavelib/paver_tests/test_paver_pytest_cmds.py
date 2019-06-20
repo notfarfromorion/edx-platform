@@ -58,7 +58,7 @@ class TestPaverPytestCmd(unittest.TestCase):
                 env_var_cmd = "{} DISABLE_COURSEENROLLMENT_HISTORY=1".format(django_env_var_cmd)
 
                 xdist_string = u'--tx {}*ssh="jenkins@{} -o StrictHostKeyChecking=no"' \
-                               '//python="source edxapp_env/bin/activate; {}; python"' \
+                               '//python="source edxapp-env/bin/activate; {}; python"' \
                                '//chdir="edx-platform"' \
                                .format(processes, ip, env_var_cmd)
                 expected_statement.append(xdist_string)
