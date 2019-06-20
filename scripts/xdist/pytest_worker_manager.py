@@ -68,6 +68,8 @@ class PytestWorkerManager():
             worker_instance_ids.append(instance_response['InstanceId'])
 
         # Wait for workers to finish spinning up
+        from time import sleep
+        sleep(30)
         not_running = worker_instance_ids[:]
         ip_addresses = []
         all_running = False
