@@ -16,7 +16,7 @@ from collections import OrderedDict
 
 from django.utils.translation import ugettext_lazy
 
-from .common import *
+from .base import *
 import os
 from path import Path as path
 from uuid import uuid4
@@ -124,6 +124,8 @@ XQUEUE_WAITTIME_BETWEEN_REQUESTS = 5  # seconds
 # Don't rely on a real staff grading backend
 MOCK_STAFF_GRADING = True
 MOCK_PEER_GRADING = True
+
+COMMENTS_SERVICE_URL = 'http://localhost:4567'
 
 ############################ STATIC FILES #############################
 
@@ -553,12 +555,14 @@ COURSE_CATALOG_API_URL = 'https://catalog.example.com/api/v1'
 
 COMPREHENSIVE_THEME_DIRS = [REPO_ROOT / "themes", REPO_ROOT / "common/test"]
 COMPREHENSIVE_THEME_LOCALE_PATHS = [REPO_ROOT / "themes/conf/locale", ]
+ENABLE_COMPREHENSIVE_THEMING = True
 
 LMS_ROOT_URL = "http://localhost:8000"
 
 FRONTEND_LOGOUT_URL = LMS_ROOT_URL + '/logout'
 
 ECOMMERCE_API_URL = 'https://ecommerce.example.com/api/v2/'
+ECOMMERCE_PUBLIC_URL_ROOT = None
 ENTERPRISE_API_URL = 'http://enterprise.example.com/enterprise/api/v1/'
 ENTERPRISE_CONSENT_API_URL = 'http://enterprise.example.com/consent/api/v1/'
 
@@ -616,3 +620,13 @@ derive_settings(__name__)
 
 ############### Settings for edx-rbac  ###############
 SYSTEM_WIDE_ROLE_CLASSES = os.environ.get("SYSTEM_WIDE_ROLE_CLASSES", [])
+
+###################### Grade Downloads ######################
+# These keys are used for all of our asynchronous downloadable files, including
+# the ones that contain information other than grades.
+
+GRADES_DOWNLOAD = {
+    'STORAGE_TYPE': 'localfs',
+    'BUCKET': 'edx-grades',
+    'ROOT_PATH': '/tmp/edx-s3/grades',
+}

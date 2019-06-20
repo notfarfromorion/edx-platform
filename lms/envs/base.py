@@ -26,7 +26,7 @@ Longer TODO:
 # Pylint gets confused by path.py instances, which report themselves as class
 # objects. As a result, pylint applies the wrong regex in validating names,
 # and throws spurious errors. Therefore, we disable invalid-name checking.
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, wrong-import-position
 
 import imp
 import sys
@@ -65,7 +65,7 @@ PLATFORM_TWITTER_ACCOUNT = "@YourPlatformTwitterAccount"
 
 ENABLE_JASMINE = False
 
-LMS_ROOT_URL = "http://localhost:8000"
+LMS_ROOT_URL = 'https://localhost:18000'
 LMS_INTERNAL_ROOT_URL = LMS_ROOT_URL
 LMS_ENROLLMENT_API_PATH = "/api/enrollment/v1/"
 
@@ -453,7 +453,7 @@ PASSWORD_RESET_EMAIL_RATE_LIMIT = {
 COURSE_MESSAGE_ALERT_DURATION_IN_DAYS = 14
 
 ############################# SET PATH INFORMATION #############################
-PROJECT_ROOT = path(__file__).abspath().dirname().dirname()  # /edx-platform/lms
+PROJECT_ROOT = path(__file__).abspath().dirname().dirname()  # /edx-platform/lms pylint: disable=no-value-for-parameter
 REPO_ROOT = PROJECT_ROOT.dirname()
 COMMON_ROOT = REPO_ROOT / "common"
 OPENEDX_ROOT = REPO_ROOT / "openedx"
@@ -489,6 +489,57 @@ DATABASE_ROUTERS = [
     'openedx.core.lib.django_courseware_routers.StudentModuleHistoryExtendedRouter',
 ]
 
+############################ Cache Configuration ###############################
+
+CACHES = {
+    'course_structure_cache': {
+        'KEY_PREFIX': 'course_structure',
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'TIMEOUT': '7200',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+    'celery': {
+        'KEY_PREFIX': 'celery',
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'TIMEOUT': '7200',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+    'mongo_metadata_inheritance': {
+        'KEY_PREFIX': 'mongo_metadata_inheritance',
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'TIMEOUT': 300,
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+    'staticfiles': {
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'KEY_PREFIX': 'staticfiles_general',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+    'default': {
+        'VERSION': '1',
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'KEY_PREFIX': 'default',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+    'configuration': {
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'KEY_PREFIX': 'configuration',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+    'general': {
+        'KEY_FUNCTION': 'util.memcache.safe_key',
+        'LOCATION': ['localhost:11211'],
+        'KEY_PREFIX': 'general',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    },
+}
+
 ############################ OpenID Provider  ##################################
 OPENID_PROVIDER_TRUSTED_ROOTS = ['cs50.net', '*.cs50.net']
 
@@ -496,7 +547,7 @@ OPENID_PROVIDER_TRUSTED_ROOTS = ['cs50.net', '*.cs50.net']
 
 # OpenID Connect issuer ID. Normally the URL of the authentication endpoint.
 
-OAUTH_OIDC_ISSUER = 'https:/example.com/oauth2'
+OAUTH_OIDC_ISSUER = 'http://127.0.0.1:8000/oauth2'
 
 # OpenID Connect claim handlers
 
@@ -558,7 +609,7 @@ TPA_PROVIDER_SUSTAINED_THROTTLE = '50/hr'
 
 ################################## TEMPLATE CONFIGURATION #####################################
 # Mako templating
-import tempfile
+import tempfile  # pylint: disable=wrong-import-order
 MAKO_MODULE_DIR = os.path.join(tempfile.gettempdir(), 'mako_lms')
 MAKO_TEMPLATE_DIRS_BASE = [
     PROJECT_ROOT / 'templates',
@@ -699,16 +750,44 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 STATIC_GRAB = False
 DEV_CONTENT = True
 
+# License for serving content in China
+ICP_LICENSE = None
+ICP_LICENSE_INFO = {}
+
+ELASTIC_SEARCH_CONFIG = [
+    {
+        'use_ssl': False,
+        'host': 'localhost',
+        'port': 9200
+    }
+]
+
+STATIC_ROOT_BASE = '/edx/var/edxapp/staticfiles'
+
+LOGGING_ENV = 'sandbox'
+
 EDX_ROOT_URL = ''
 
 LOGIN_REDIRECT_URL = EDX_ROOT_URL + '/login'
 LOGIN_URL = EDX_ROOT_URL + '/login'
 
+PARTNER_SUPPORT_EMAIL = ''
+
+CERT_QUEUE = 'certificates'
+
+LOCAL_LOGLEVEL = "INFO"
+
+LOG_DIR = '/edx/var/log/edx'
+
+DATA_DIR = '/edx/app/edxapp'
+
+MAINTENANCE_BANNER_TEXT = 'Sample banner message'
+
 ### Dark code. Should be enabled in local settings for devel.
 
 ENABLE_MULTICOURSE = False  # set to False to disable multicourse display (see lib.util.views.edXhome)
 
-WIKI_ENABLED = False
+WIKI_ENABLED = True
 
 ###
 
@@ -872,6 +951,10 @@ XBLOCK_SELECT_FUNCTION = prefer_xmodules
 # Paths to wrapper methods which should be applied to every XBlock's FieldData.
 XBLOCK_FIELD_DATA_WRAPPERS = ()
 
+XBLOCK_FS_STORAGE_BUCKET = None
+XBLOCK_FS_STORAGE_PREFIX = None
+XBLOCK_SETTINGS = {}
+
 ############# ModuleStore Configuration ##########
 
 MODULESTORE_BRANCH = 'published-only'
@@ -918,8 +1001,8 @@ MODULESTORE = {
 #################### Python sandbox ############################################
 
 CODE_JAIL = {
-    # Path to a sandboxed Python executable.  None means don't bother.
-    'python_bin': None,
+    # from https://github.com/edx/codejail/blob/master/codejail/django_integration.py#L24, '' should be same as None
+    'python_bin': '/edx/app/edxapp/venvs/edxapp-sandbox/bin/python',
     # User to run as in the sandbox.
     'user': 'sandbox',
 
@@ -927,6 +1010,12 @@ CODE_JAIL = {
     'limits': {
         # How many CPU seconds can jailed code use?
         'CPU': 1,
+        # Limit the memory of the jailed process to something high but not
+        # infinite (512MiB in bytes)
+        'VMEM': 536870912,
+        # Time in seconds that the jailed process has to run.
+        'REALTIME': 3,
+        'PROXY': 0,
     },
 }
 
@@ -947,9 +1036,18 @@ USE_TZ = True
 SESSION_COOKIE_SECURE = False
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.PickleSerializer'
+SESSION_COOKIE_DOMAIN = ""
+SESSION_COOKIE_NAME = 'sessionid'
 
 # CMS base
-CMS_BASE = 'localhost:8001'
+CMS_BASE = 'localhost:18010'
+
+# LMS base
+LMS_BASE = 'localhost:18000'
+
+# Studio name
+STUDIO_NAME = 'Studio'
+STUDIO_SHORT_NAME = 'Studio'
 
 # Site info
 SITE_NAME = "example.com"
@@ -958,7 +1056,10 @@ ROOT_URLCONF = 'lms.urls'
 # NOTE: Please set ALLOWED_HOSTS to some sane value, as we do not allow the default '*'
 
 # Platform Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 25
+EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = 'registration@example.com'
 DEFAULT_FEEDBACK_EMAIL = 'feedback@example.com'
 SERVER_EMAIL = 'devops@example.com'
@@ -990,6 +1091,10 @@ STATICFILES_DIRS = [
 
 FAVICON_PATH = 'images/favicon.ico'
 DEFAULT_COURSE_ABOUT_IMAGE_URL = 'images/pencils.jpg'
+
+CAS_SERVER_URL = ""
+CAS_EXTRA_LOGIN_PARAMS = ""
+CAS_ATTRIBUTE_CALLBACK = ""
 
 # User-uploaded content
 MEDIA_ROOT = '/edx/var/edxapp/media/'
@@ -1102,7 +1207,7 @@ STATICI18N_OUTPUT_DIR = "js/i18n"
 
 
 # Localization strings (e.g. django.po) are under these directories
-def _make_locale_paths(settings):
+def _make_locale_paths(settings):  # pylint: disable=missing-docstring
     locale_paths = [settings.REPO_ROOT + '/conf/locale']  # edx-platform/conf/locale/
     if settings.ENABLE_COMPREHENSIVE_THEMING:
         # Add locale paths to settings for comprehensive theming.
@@ -1125,6 +1230,8 @@ TRANSLATORS_GUIDE = 'https://edx.readthedocs.org/projects/edx-developer-guide/en
 # years). This is only used if DEFAULT_FILE_STORAGE is overriden to use S3
 # in the global settings.py
 AWS_QUERYSTRING_EXPIRE = 10 * 365 * 24 * 60 * 60  # 10 years
+AWS_SES_REGION_NAME = 'us-east-1'
+AWS_SES_REGION_ENDPOINT = 'email.us-east-1.amazonaws.com'
 
 ################################# SIMPLEWIKI ###################################
 SIMPLE_WIKI_REQUIRE_LOGIN_EDIT = True
@@ -1151,7 +1258,7 @@ WIKI_LINK_DEFAULT_LEVEL = 2
 FEEDBACK_SUBMISSION_EMAIL = None
 
 ##### Zendesk #####
-ZENDESK_URL = None
+ZENDESK_URL = ''
 ZENDESK_USER = None
 ZENDESK_API_KEY = None
 ZENDESK_CUSTOM_FIELDS = {}
@@ -1160,7 +1267,7 @@ ZENDESK_CUSTOM_FIELDS = {}
 EMBARGO_SITE_REDIRECT_URL = None
 
 ##### shoppingcart Payment #####
-PAYMENT_SUPPORT_EMAIL = 'payment@example.com'
+PAYMENT_SUPPORT_EMAIL = 'billing@example.com'
 
 ##### Using cybersource by default #####
 
@@ -1844,7 +1951,7 @@ REQUIRE_JS_PATH_OVERRIDES = {
     'js/student_account/logistration_factory': 'js/student_account/logistration_factory.js',
     'js/courseware/courseware_factory': 'js/courseware/courseware_factory.js',
     'js/groups/views/cohorts_dashboard_factory': 'js/groups/views/cohorts_dashboard_factory.js',
-    'js/groups/discussions_management/discussions_dashboard_factory': 'js/discussions_management/views/discussions_dashboard_factory.js',
+    'js/groups/discussions_management/discussions_dashboard_factory': 'js/discussions_management/views/discussions_dashboard_factory.js',  # pylint: disable=line-too-long
     'draggabilly': 'js/vendor/draggabilly.js',
     'hls': 'common/js/vendor/hls.js'
 }
@@ -1925,6 +2032,13 @@ CELERY_QUEUES = {
 # let logging work as configured:
 CELERYD_HIJACK_ROOT_LOGGER = False
 
+CELERY_BROKER_VHOST = ''
+CELERY_BROKER_USE_SSL = False
+CELERY_EVENT_QUEUE_TTL = None
+
+CELERY_BROKER_TRANSPORT = 'amqp'
+CELERY_BROKER_HOSTNAME = 'localhost'
+
 ################################ Block Structures ###################################
 
 BLOCK_STRUCTURES_SETTINGS = dict(
@@ -1952,7 +2066,7 @@ BLOCK_STRUCTURES_SETTINGS = dict(
 BULK_EMAIL_DEFAULT_FROM_EMAIL = 'no-reply@example.com'
 
 # Parameters for breaking down course enrollment into subtasks.
-BULK_EMAIL_EMAILS_PER_TASK = 100
+BULK_EMAIL_EMAILS_PER_TASK = 500
 
 # Initial delay used for retrying tasks.  Additional retries use
 # longer delays.  Value is in seconds.
@@ -2314,7 +2428,8 @@ CSRF_COOKIE_AGE = 60 * 60 * 24 * 7 * 52
 # It is highly recommended that you override this in any environment accessed by
 # end users
 CSRF_COOKIE_SECURE = False
-
+CROSS_DOMAIN_CSRF_COOKIE_DOMAIN = ''
+CROSS_DOMAIN_CSRF_COOKIE_NAME = ''
 ######################### Django Rest Framework ########################
 
 REST_FRAMEWORK = {
@@ -2338,23 +2453,7 @@ EDXMKTG_USER_INFO_COOKIE_NAME = 'edx-user-info'
 EDXMKTG_USER_INFO_COOKIE_VERSION = 1
 
 MKTG_URLS = {}
-MKTG_URL_LINK_MAP = {
-    'ABOUT': 'about',
-    'CONTACT': 'contact',
-    'FAQ': 'help',
-    'COURSES': 'courses',
-    'ROOT': 'root',
-    'TOS': 'tos',
-    'HONOR': 'honor',  # If your site does not have an honor code, simply delete this line.
-    'PRIVACY': 'privacy',
-    'PRESS': 'press',
-    'BLOG': 'blog',
-    'DONATE': 'donate',
-    'SITEMAP.XML': 'sitemap_xml',
-
-    # Verified Certificates
-    'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
-}
+MKTG_URL_LINK_MAP = {}
 
 STATIC_TEMPLATE_VIEW_DEFAULT_FILE_EXTENSION = 'html'
 
@@ -2472,10 +2571,7 @@ SOCIAL_MEDIA_FOOTER_DISPLAY = {
 ################# Mobile URLS ##########################
 
 # These are URLs to the app store for mobile.
-MOBILE_STORE_URLS = {
-    'apple': '#',
-    'google': '#'
-}
+MOBILE_STORE_URLS = {}
 
 ################# Student Verification #################
 VERIFY_STUDENT = {
@@ -2512,12 +2608,14 @@ if FEATURES.get('ENABLE_CORS_HEADERS'):
         'use-jwt-cookie',
     )
 
+CORS_ORIGIN_WHITELIST = []
+CORS_ORIGIN_ALLOW_ALL = False
 # Default cache expiration for the cross-domain proxy HTML page.
 # This is a static page that can be iframed into an external page
 # to simulate cross-domain requests.
 XDOMAIN_PROXY_CACHE_TIMEOUT = 60 * 15
 
-LOGIN_REDIRECT_WHITELIST = [CMS_BASE]
+LOGIN_REDIRECT_WHITELIST = []
 
 ###################### Registration ##################################
 
@@ -2586,17 +2684,22 @@ BADGR_TIMEOUT = 10
 # the ones that contain information other than grades.
 GRADES_DOWNLOAD_ROUTING_KEY = HIGH_MEM_QUEUE
 
+POLICY_CHANGE_GRADES_ROUTING_KEY = 'edx.lms.core.default'
+
 GRADES_DOWNLOAD = {
-    'STORAGE_TYPE': 'localfs',
-    'BUCKET': 'edx-grades',
-    'ROOT_PATH': '/tmp/edx-s3/grades',
+    'STORAGE_CLASS': 'django.core.files.storage.FileSystemStorage',
+    'STORAGE_KWARGS': {
+        'location': '/tmp/edx-s3/grades',
+    },
+    'STORAGE_TYPE': None,
+    'BUCKET': None,
+    'ROOT_PATH': None,
 }
 
 FINANCIAL_REPORTS = {
     'STORAGE_TYPE': 'localfs',
-    'BUCKET': 'edx-financial-reports',
-    'CUSTOM_DOMAIN': 'edx-financial-reports.s3.amazonaws.com',
-    'ROOT_PATH': '/tmp/edx-s3/financial_reports',
+    'BUCKET': None,
+    'ROOT_PATH': 'sandbox',
 }
 
 #### Grading policy change-related settings #####
@@ -2622,13 +2725,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+PASSWORD_POLICY_COMPLIANCE_ROLLOUT_CONFIG = {
+    'ENFORCE_COMPLIANCE_ON_LOGIN': False
+}
+
 ############################ ORA 2 ############################################
 
 # By default, don't use a file prefix
 ORA2_FILE_PREFIX = None
 
 # Default File Upload Storage bucket and prefix. Used by the FileUpload Service.
-FILE_UPLOAD_STORAGE_BUCKET_NAME = 'edxuploads'
+FILE_UPLOAD_STORAGE_BUCKET_NAME = 'SET-ME-PLEASE (ex. bucket-name)'
 FILE_UPLOAD_STORAGE_PREFIX = 'submissions_attachments'
 
 ##### ACCOUNT LOCKOUT DEFAULT PARAMETERS #####
@@ -2655,6 +2762,8 @@ VIDEO_IMAGE_SETTINGS = dict(
     DIRECTORY_PREFIX='video-images/',
 )
 
+VIDEO_IMAGE_MAX_AGE = 31536000
+
 ########################## VIDEO TRANSCRIPTS STORAGE ############################
 
 VIDEO_TRANSCRIPTS_SETTINGS = dict(
@@ -2669,6 +2778,7 @@ VIDEO_TRANSCRIPTS_SETTINGS = dict(
     DIRECTORY_PREFIX='video-transcripts/',
 )
 
+VIDEO_TRANSCRIPTS_MAX_AGE = 31536000
 
 # Source:
 # http://loc.gov/standards/iso639-2/ISO-639-2_utf-8.txt according to http://en.wikipedia.org/wiki/ISO_639-1
@@ -2922,6 +3032,8 @@ OPENID_DOMAIN_PREFIX = 'openid:'
 ### Analytics API
 ANALYTICS_API_KEY = ""
 ANALYTICS_API_URL = "http://localhost:18100"
+ANALYTICS_DASHBOARD_URL = 'http://localhost:18110/courses'
+ANALYTICS_DASHBOARD_NAME = 'Your Platform Name Here Insights'
 
 # REGISTRATION CODES DISPLAY INFORMATION SUBTITUTIONS IN THE INVOICE ATTACHMENT
 INVOICE_CORP_ADDRESS = "Please place your corporate address\nin this configuration"
@@ -2944,7 +3056,7 @@ COURSE_CATALOG_VISIBILITY_PERMISSION = 'see_exists'
 COURSE_ABOUT_VISIBILITY_PERMISSION = 'see_exists'
 
 DEFAULT_COURSE_VISIBILITY_IN_CATALOG = "both"
-DEFAULT_MOBILE_AVAILABLE = True
+DEFAULT_MOBILE_AVAILABLE = False
 
 # Enrollment API Cache Timeout
 ENROLLMENT_COURSE_DETAILS_CACHE_TIMEOUT = 60
@@ -3057,15 +3169,21 @@ SOCIAL_PLATFORMS = {
 }
 
 # E-Commerce API Configuration
-ECOMMERCE_PUBLIC_URL_ROOT = None
-ECOMMERCE_API_URL = None
+ECOMMERCE_PUBLIC_URL_ROOT = 'http://localhost:8002'
+ECOMMERCE_API_URL = 'http://localhost:8002/api/v2'
 ECOMMERCE_API_TIMEOUT = 5
 ECOMMERCE_SERVICE_WORKER_USERNAME = 'ecommerce_worker'
 
-COURSE_CATALOG_API_URL = None
+COURSE_CATALOG_API_URL = 'http://localhost:8008/api/v1'
 
-CREDENTIALS_INTERNAL_SERVICE_URL = None
+CREDENTIALS_INTERNAL_SERVICE_URL = 'http://localhost:8005'
 CREDENTIALS_PUBLIC_SERVICE_URL = None
+
+JOURNALS_URL_ROOT = 'https://journals-localhost:18000'
+JOURNALS_API_URL = 'https://journals-localhost:18000/api/v1/'
+
+COMMENTS_SERVICE_URL = 'http://localhost:18080'
+COMMENTS_SERVICE_KEY = 'password'
 
 # Reverification checkpoint name pattern
 CHECKPOINT_PATTERN = r'(?P<checkpoint_name>[^/]+)'
@@ -3216,6 +3334,9 @@ MICROSITE_TEMPLATE_BACKEND = 'microsite_configuration.backends.filebased.Filebas
 # TTL for microsite database template cache
 MICROSITE_DATABASE_TEMPLATE_CACHE_TTL = 5 * 60
 
+MICROSITE_ROOT_DIR = '/edx/app/edxapp/edx-microsite'
+MICROSITE_CONFIGURATION = {}
+
 ################################ Settings for rss_proxy ################################
 
 RSS_PROXY_CACHE_TIMEOUT = 3600  # The length of time we cache RSS retrieved from remote URLs in seconds
@@ -3279,7 +3400,7 @@ PROGRAM_CERTIFICATES_ROUTING_KEY = DEFAULT_PRIORITY_QUEUE
 SITE_ID = 1
 
 # dir containing all themes
-COMPREHENSIVE_THEME_DIRS = [REPO_ROOT / "themes"]
+COMPREHENSIVE_THEME_DIRS = []
 
 # Theme directory locale paths
 COMPREHENSIVE_THEME_LOCALE_PATHS = []
@@ -3288,7 +3409,7 @@ COMPREHENSIVE_THEME_LOCALE_PATHS = []
 # set to None if you want to use openedx theme
 DEFAULT_SITE_THEME = None
 
-ENABLE_COMPREHENSIVE_THEMING = True
+ENABLE_COMPREHENSIVE_THEMING = False
 
 # API access management
 API_ACCESS_MANAGER_EMAIL = 'api-access@example.com'
@@ -3297,7 +3418,7 @@ API_DOCUMENTATION_URL = 'https://course-catalog-api-guide.readthedocs.io/en/late
 AUTH_DOCUMENTATION_URL = 'https://course-catalog-api-guide.readthedocs.io/en/latest/authentication/index.html'
 
 # Affiliate cookie tracking
-AFFILIATE_COOKIE_NAME = 'affiliate_id'
+AFFILIATE_COOKIE_NAME = 'dev_affiliate_id'
 
 ############## Settings for RedirectMiddleware ###############
 
@@ -3338,7 +3459,7 @@ ENTERPRISE_CUSTOMER_CATALOG_DEFAULT_CONTENT_FILTER = {}
 # These default settings are utilized by the LMS when interacting with the service,
 # and are overridden by the configuration parameter accessors defined in production.py
 
-ENTERPRISE_API_URL = LMS_INTERNAL_ROOT_URL + '/enterprise/api/v1/'
+ENTERPRISE_API_URL = 'https://localhost:18000/enterprise/api/v1'
 ENTERPRISE_CONSENT_API_URL = LMS_INTERNAL_ROOT_URL + '/consent/api/v1/'
 ENTERPRISE_SERVICE_WORKER_USERNAME = 'enterprise_worker'
 ENTERPRISE_API_CACHE_TIMEOUT = 3600  # Value is in seconds
@@ -3451,7 +3572,7 @@ COURSEGRAPH_JOB_QUEUE = DEFAULT_PRIORITY_QUEUE
 
 
 # Initialize to 'unknown', but read from JSON in production.py
-EDX_PLATFORM_REVISION = 'unknown'
+EDX_PLATFORM_REVISION = 'release'
 
 ############## Settings for Completion API #########################
 
@@ -3532,3 +3653,14 @@ SYSTEM_WIDE_ROLE_CLASSES = []
 from openedx.core.djangoapps.plugins import plugin_apps, plugin_settings, constants as plugin_constants
 INSTALLED_APPS.extend(plugin_apps.get_apps(plugin_constants.ProjectType.LMS))
 plugin_settings.add_plugins(__name__, plugin_constants.ProjectType.LMS, plugin_constants.SettingsType.COMMON)
+
+DEPRECATED_ADVANCED_COMPONENT_TYPES = []
+
+############### Settings for video pipeline ##################
+VIDEO_UPLOAD_PIPELINE = {
+    'BUCKET': '',
+    'ROOT_PATH': '',
+}
+
+############### Settings for django file storage ##################
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
