@@ -205,7 +205,7 @@ from student.models import CourseEnrollment
         % endfor
         % if show_load_all_courses_link:
                 <br/>
-                 ${courses_count} ${_("results successfully populated,")}
+                 ${len(course_enrollments)} ${_("results successfully populated,")}
                  <a href="${reverse('dashboard')}?load_all_course">
                      ${_("click to load all enrolled courses")}
                 </a>

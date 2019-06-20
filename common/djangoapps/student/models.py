@@ -1591,12 +1591,7 @@ class CourseEnrollment(models.Model):
         return cls.objects.filter(user=user, is_active=1).select_related('user')
 
     @classmethod
-    def get_dashboard_course_limit(cls):
-        course_limit = getattr(settings, 'DASHBOARD_COURSE_LIMIT')
-        return course_limit
-
-    @classmethod
-    def enrollments_for_user_with_overviews_preload(cls, user, load_all_courses=False):  # pylint: disable=invalid-name
+    def enrollments_for_user_with_overviews_preload(cls, user, load_all_courses=True, courses_limit=None):  # pylint: disable=invalid-name
         """
         List of user's CourseEnrollments, CourseOverviews preloaded if possible.
 
@@ -1614,9 +1609,8 @@ class CourseEnrollment(models.Model):
 
         enrollments = cls.enrollments_for_user(user)
         if not load_all_courses:
-            courses_count = cls.get_dashboard_course_limit()
-            if courses_count:
-                enrollments = cls.enrollments_for_user(user).order_by('user__id', '-created')[:courses_count]
+            if courses_limit:
+                enrollments = cls.enrollments_for_user(user).order_by('-created')[:courses_limit]
 
         overviews = CourseOverview.get_from_ids_if_exists(
             enrollment.course_id for enrollment in enrollments
